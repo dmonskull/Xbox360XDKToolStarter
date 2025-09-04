@@ -102,7 +102,6 @@ namespace testapp
             _jumpList.ShowFrequentCategory = false;
             _jumpList.ShowRecentCategory = false;
 
-            // fire when user removes items; will be delivered on next JumpList.Apply()
             _jumpList.JumpItemsRemovedByUser += JumpList_JumpItemsRemovedByUser;
 
             _jumpList.Apply();
@@ -110,10 +109,10 @@ namespace testapp
 
         private void StartJumpListWatcher()
         {
-            _jumpListWatcher = new System.Windows.Forms.Timer { Interval = 1500 }; // 1.5s
+            _jumpListWatcher = new System.Windows.Forms.Timer { Interval = 1500 };
             _jumpListWatcher.Tick += (s, e) =>
             {
-                try { _jumpList?.Apply(); } catch { /* ignore */ }
+                try { _jumpList?.Apply(); } catch { }
             };
             _jumpListWatcher.Start();
         }
@@ -139,8 +138,7 @@ namespace testapp
 
             if (changed)
             {
-                SaveFavorites();           // update favorites.json now
-                                           // (optional) refresh any in-app UI that lists favorites here
+                SaveFavorites();
             }
         }
 
@@ -191,32 +189,28 @@ namespace testapp
         {
             if (listView1.SelectedItems.Count == 0) return;
 
-            var selected = listView1.SelectedItems[0];
-            string fullPath = selected.Tag?.ToString();
+            string fullPath = listView1.SelectedItems[0].Tag?.ToString();
             if (string.IsNullOrWhiteSpace(fullPath)) return;
 
-            var toRemove = new List<System.Windows.Shell.JumpItem>();
-            foreach (var item in _jumpList.JumpItems)
+            // ✅ Remove from favorites list
+            var fav = _favorites.FirstOrDefault(f =>
+                f.Path.Equals(fullPath, StringComparison.OrdinalIgnoreCase));
+            if (fav != null)
             {
-                if (item is System.Windows.Shell.JumpTask jt &&
-                    string.Equals(jt.Arguments?.Trim('"'), fullPath, StringComparison.OrdinalIgnoreCase))
-                {
-                    toRemove.Add(item);
-                }
+                _favorites.Remove(fav);
+                SaveFavorites();
             }
-            foreach (var item in toRemove)
-                _jumpList.JumpItems.Remove(item);
 
-            _jumpList.Apply();
+            // ✅ Rebuild JumpList so it matches the updated list
+            RebuildJumpList(_favorites);
         }
+
 
         public void LaunchGameFromPath(string fullPath)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(fullPath)) return;
-
-                // Ensure console connection
                 if (xbCon == null || !activeConnection)
                 {
                     if (!ConnectToConsole2())
@@ -290,8 +284,6 @@ namespace testapp
                 prompt.Width = 300;
                 prompt.Height = 150;
                 prompt.Text = "Rename Favorite";
-
-                // ✅ Center on the screen
                 prompt.StartPosition = FormStartPosition.CenterScreen;
 
                 var textBox = new TextBox()
@@ -318,7 +310,6 @@ namespace testapp
                 return prompt.ShowDialog() == DialogResult.OK ? textBox.Text : defaultName;
             }
         }
-
 
         private void SaveFavorites()
         {
@@ -389,7 +380,6 @@ namespace testapp
             fav.Name = newName;
             SaveFavorites();
 
-            // refresh JumpList (clear and rebuild)
             _jumpList.JumpItems.Clear();
             foreach (var f in _favorites)
                 AddToJumpList(f.Name, f.Path);
@@ -425,7 +415,6 @@ namespace testapp
             _removeFavMenuItem.Enabled = isFavorited;
             _renameFavMenuItem.Enabled = isFavorited;
         }
-
 
         #endregion
 
@@ -489,7 +478,6 @@ namespace testapp
                 MessageBox.Show("Failed to load directory: " + ex.Message);
             }
         }
-
 
         // double click logic for file explorer
         private void listView1_DoubleClick_1(object sender, EventArgs e)
@@ -607,7 +595,7 @@ namespace testapp
                 if (activeConnection && xbCon != null &&
                     xbCon.DebugTarget.IsDebuggerConnected(out _, out _))
                 {
-                    return true; // already connected
+                    return true;
                 }
 
                 if (xbManager == null)
@@ -646,7 +634,7 @@ namespace testapp
 
                 try
                 {
-                    string cpuKey = xbCon.GetCPUKey();   // uses your extension
+                    string cpuKey = xbCon.GetCPUKey();
                     cpuKeyBox.Text = cpuKey;
                 }
                 catch
