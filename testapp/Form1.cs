@@ -588,6 +588,7 @@ namespace testapp
             }
         }
 
+        // no message boxes, just return bool
         public static bool ConnectToConsole2()
         {
             try
@@ -609,7 +610,7 @@ namespace testapp
 
                 if (!xbCon.DebugTarget.IsDebuggerConnected(out _, out _))
                 {
-                    xbCon.DebugTarget.ConnectAsDebugger("Xbox Toolbox", XboxDebugConnectFlags.Force);
+                    xbCon.DebugTarget.ConnectAsDebugger("DMON", XboxDebugConnectFlags.Force);
                 }
 
                 activeConnection = xbCon.DebugTarget.IsDebuggerConnected(out _, out _);

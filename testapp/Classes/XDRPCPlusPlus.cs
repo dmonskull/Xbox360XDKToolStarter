@@ -8,6 +8,17 @@ namespace XDRPC {
     static class XDRPCPlusPlus {
         private static byte[] memoryBuffer = new byte[32];
         private static uint outInt = 0;
+
+        public static void CallVoid(this IXboxConsole xbc, uint offset, params object[] args)
+        {
+            XDRPCMarshaler.ExecuteRPC<uint>(
+                xbc,
+                new XDRPCExecutionOptions(XDRPCMode.Title, offset),
+                args
+            );
+        }
+
+
         public static string CallString(this IXboxConsole xbc, uint offset, params object[] args) {
             uint address = XDRPCMarshaler.ExecuteRPC<uint>(xbc, new XDRPCExecutionOptions(XDRPCMode.Title, offset), args);
             return ReadString(xbc, address);
